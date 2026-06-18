@@ -1,153 +1,95 @@
 import streamlit as st
 import sqlite3
-import pandas as pd
 from datetime import datetime
 
-# ==========================
-# 페이지 설정
-# ==========================
+# -------------------------
+# DB 설정
+# -------------------------
+conn = sqlite3.connect("suggestions.db", check_same_thread=False)
+cursor = conn.cursor()
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS suggestions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category TEXT,
+    content TEXT,
+    created_at TEXT
+)
+""")
+conn.commit()
+
+# -------------------------
+# 함수
+# -------------------------
+def add_suggestion(category, content):
+    cursor.execute(
+        """
+        INSERT INTO suggestions(category, content, created_at)
+        VALUES (?, ?, ?)
+        """,
+        (category, content, datetime.now().strftime("%Y-%m-%d %H:%M"))
+    )
+    conn.commit()
+
+
+def get_suggestions(category=None):
+    if category and category != "전체":
+        cursor.execute(
+            """
+            SELECT * FROM suggestions
+            WHERE category=?
+            ORDER BY id DESC
+            """,
+            (category,)
+        )
+    else:
+        cursor.execute(
+            """
+            SELECT * FROM suggestions
+            ORDER BY id DESC
+            """
+        )
+
+    return cursor.fetchall()
+
+
+def delete_suggestion(suggestion_id):
+    cursor.execute(
+        """
+        DELETE FROM suggestions
+        WHERE id=?
+        """,
+        (suggestion_id,)
+    )
+    conn.commit()
+
+
+# -------------------------
+# 화면 설정
+# -------------------------
 st.set_page_config(
     page_title="학급 건의함",
     page_icon="📮",
     layout="wide"
 )
 
-# ==========================
-# 스타일
-# ==========================
-st.markdown("""
-<style>
+st.title("📮 학급 건의함")
+st.caption("익명으로 자유롭게 건의해 주세요!")
 
-.main {
-    padding-top: 1rem;
-}
+# -------------------------
+# 사이드바
+# -------------------------
+st.sidebar.header("📊 현황")
 
-.block {
-    background:#f8fafc;
-    padding:15px;
-    border-radius:15px;
-    border:1px solid #e2e8f0;
-    margin-bottom:10px;
-}
+cursor.execute("SELECT COUNT(*) FROM suggestions")
+total = cursor.fetchone()[0]
 
-.title {
-    text-align:center;
-    font-size:42px;
-    font-weight:bold;
-    color:#2563eb;
-}
+st.sidebar.metric("총 건의 수", total)
 
-.sub {
-    text-align:center;
-    color:gray;
-}
-
-</style>
-""", unsafe_allow_html=True)
-
-# ==========================
-# DB 연결
-# ==========================
-conn = sqlite3.connect(
-    "suggestions.db",
-    check_same_thread=False
-)
-
-cursor = conn.cursor()
-
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS suggestions(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    category TEXT,
-    content TEXT,
-    likes INTEGER DEFAULT 0,
-    created_at TEXT
-)
-""")
-
-conn.commit()
-
-# ==========================
-# 함수
-# ==========================
-def add_suggestion(category, content):
-    cursor.execute("""
-    INSERT INTO suggestions
-    (category, content, likes, created_at)
-    VALUES (?, ?, ?, ?)
-    """,
-    (
-        category,
-        content,
-        0,
-        datetime.now().strftime("%Y-%m-%d %H:%M")
-    ))
-    conn.commit()
-
-
-def get_suggestions(category="전체"):
-
-    if category == "전체":
-        cursor.execute("""
-        SELECT *
-        FROM suggestions
-        ORDER BY likes DESC, id DESC
-        """)
-    else:
-        cursor.execute("""
-        SELECT *
-        FROM suggestions
-        WHERE category=?
-        ORDER BY likes DESC, id DESC
-        """,
-        (category,))
-
-    return cursor.fetchall()
-
-
-def delete_suggestion(idx):
-    cursor.execute(
-        "DELETE FROM suggestions WHERE id=?",
-        (idx,)
-    )
-    conn.commit()
-
-
-def like_suggestion(idx):
-    cursor.execute("""
-    UPDATE suggestions
-    SET likes = likes + 1
-    WHERE id=?
-    """,
-    (idx,))
-    conn.commit()
-
-# ==========================
-# 제목
-# ==========================
-st.markdown(
-    "<div class='title'>📮 학급 건의함</div>",
-    unsafe_allow_html=True
-)
-
-st.markdown(
-    "<div class='sub'>우리 반을 더 좋게 만드는 아이디어를 남겨보세요!</div>",
-    unsafe_allow_html=True
-)
-
-st.divider()
-
-# ==========================
-# 메뉴
-# ==========================
-menu = st.sidebar.radio(
-    "메뉴 선택",
-    [
-        "📝 건의하기",
-        "📋 건의 목록",
-        "📊 통계"
-    ]
-)
+# -------------------------
+# 건의 작성
+# -------------------------
+st.subheader("✏️ 건의하기")
 
 categories = [
     "수업",
@@ -157,163 +99,76 @@ categories = [
     "기타"
 ]
 
-# ==========================
-# 건의하기
-# ==========================
-if menu == "📝 건의하기":
-
-    st.header("📝 건의 작성")
-
-    with st.form(
-        "write_form",
-        clear_on_submit=True
-    ):
-
-        category = st.selectbox(
-            "건의 종류",
-            categories
-        )
-
-        content = st.text_area(
-            "건의 내용",
-            height=150,
-            placeholder="익명으로 건의가 등록됩니다."
-        )
-
-        submit = st.form_submit_button(
-            "📨 건의 등록"
-        )
-
-        if submit:
-
-            if not content.strip():
-                st.error(
-                    "건의 내용을 입력해주세요."
-                )
-
-            else:
-                try:
-                    add_suggestion(
-                        category,
-                        content
-                    )
-
-                    st.success(
-                        "건의가 등록되었습니다!"
-                    )
-
-                except Exception as e:
-                    st.error(
-                        f"오류 : {e}"
-                    )
-
-# ==========================
-# 건의 목록
-# ==========================
-elif menu == "📋 건의 목록":
-
-    st.header("📋 건의 목록")
-
-    selected_category = st.selectbox(
-        "카테고리 선택",
-        ["전체"] + categories
+with st.form("suggestion_form", clear_on_submit=True):
+    category = st.selectbox(
+        "건의 종류",
+        categories
     )
 
-    posts = get_suggestions(
-        selected_category
+    content = st.text_area(
+        "건의 내용",
+        placeholder="건의 내용을 입력하세요."
     )
 
-    if not posts:
-        st.info(
-            "등록된 건의가 없습니다."
-        )
+    submit = st.form_submit_button("등록하기")
 
-    else:
+    if submit:
+        if not content.strip():
+            st.error("건의 내용을 입력해주세요.")
+        else:
+            try:
+                add_suggestion(category, content)
+                st.success("건의가 등록되었습니다!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"오류 발생: {e}")
 
-        for post in posts:
+st.divider()
 
-            idx = post[0]
-            category = post[1]
-            content = post[2]
-            likes = post[3]
-            created = post[4]
+# -------------------------
+# 게시판
+# -------------------------
+st.subheader("📋 건의 게시판")
 
-            st.markdown(
-                f"""
-                <div class='block'>
-                <h4>📂 {category}</h4>
-                <p>{content}</p>
-                <small>🕒 {created}</small>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+filter_category = st.selectbox(
+    "카테고리 선택",
+    ["전체"] + categories
+)
 
-            col1, col2, col3 = st.columns(
-                [1,1,8]
-            )
+suggestions = get_suggestions(filter_category)
+
+if not suggestions:
+    st.info("등록된 건의가 없습니다.")
+else:
+    for suggestion in suggestions:
+        suggestion_id = suggestion[0]
+        category = suggestion[1]
+        content = suggestion[2]
+        created_at = suggestion[3]
+
+        with st.container(border=True):
+
+            col1, col2 = st.columns([8, 1])
 
             with col1:
-                if st.button(
-                    f"👍 {likes}",
-                    key=f"like{idx}"
-                ):
-                    like_suggestion(idx)
-                    st.rerun()
+                st.markdown(
+                    f"""
+                    **[{category}]**
+
+                    {content}
+
+                    ⏰ {created_at}
+                    """
+                )
 
             with col2:
                 if st.button(
                     "🗑️",
-                    key=f"delete{idx}"
+                    key=f"delete_{suggestion_id}"
                 ):
-                    delete_suggestion(idx)
-                    st.rerun()
-
-# ==========================
-# 통계
-# ==========================
-elif menu == "📊 통계":
-
-    st.header("📊 건의 통계")
-
-    cursor.execute("""
-    SELECT category,
-           COUNT(*)
-    FROM suggestions
-    GROUP BY category
-    """)
-
-    stats = cursor.fetchall()
-
-    cursor.execute("""
-    SELECT COUNT(*)
-    FROM suggestions
-    """)
-
-    total = cursor.fetchone()[0]
-
-    st.metric(
-        "전체 건의 수",
-        total
-    )
-
-    if stats:
-
-        df = pd.DataFrame(
-            stats,
-            columns=[
-                "카테고리",
-                "건수"
-            ]
-        )
-
-        st.bar_chart(
-            df.set_index(
-                "카테고리"
-            )
-        )
-
-    else:
-        st.info(
-            "통계 데이터가 없습니다."
-        )
+                    try:
+                        delete_suggestion(suggestion_id)
+                        st.success("삭제되었습니다.")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"삭제 실패: {e}")
