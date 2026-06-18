@@ -143,3 +143,70 @@ st.download_button(
 
 st.markdown("---")
 st.caption("반장 도우미 | 수행평가·시험 일정 관리 앱")
+# ==========================
+# 일정 수정 / 삭제
+# ==========================
+st.markdown("## ⚙️ 일정 관리")
+if not st.session_state.schedule.empty:
+    manage_options = [
+        f"{row['과목']} | {row['내용']} | {row['날짜'].strftime('%Y-%m-%d')}"
+        for _, row in st.session_state.schedule.iterrows()
+    ]
+    selected_item = st.selectbox(
+        "관리할 일정을 선택하세요",
+        manage_options
+    )
+    selected_index = manage_options.index(selected_item)
+    selected_row = st.session_state.schedule.iloc[selected_index]
+    tab1, tab2 = st.tabs(["✏️ 수정", "🗑️ 삭제"])
+    # -------------------
+    # 수정 기능
+    # -------------------
+    with tab1:
+        st.write("선택한 일정 수정")
+        new_type = st.selectbox(
+            "구분",
+            ["수행평가", "시험"],
+            index=0 if selected_row["구분"] == "수행평가" else 1,
+            key="edit_type"
+        )
+        new_subject = st.text_input(
+            "과목",
+            value=selected_row["과목"],
+            key="edit_subject"
+        )
+        new_date = st.date_input(
+            "날짜",
+            value=selected_row["날짜"].date(),
+            key="edit_date"
+        )
+        new_content = st.text_input(
+            "내용",
+            value=selected_row["내용"],
+            key="edit_content"
+        )
+        if st.button("수정 저장"):
+            if new_subject.strip() and new_content.strip():
+                st.session_state.schedule.loc[selected_index, "구분"] = new_type
+                st.session_state.schedule.loc[selected_index, "과목"] = new_subject
+                st.session_state.schedule.loc[selected_index, "날짜"] = pd.to_datetime(new_date)
+                st.session_state.schedule.loc[selected_index, "내용"] = new_content
+                st.success("수정이 완료되었습니다.")
+                st.rerun()
+            else:
+                st.error("과목과 내용을 입력해주세요.")
+    # -------------------
+    # 삭제 기능
+    # -------------------
+    with tab2:
+        st.warning("삭제된 일정은 복구되지 않습니다.")
+        if st.button("선택한 일정 삭제"):
+            st.session_state.schedule = (
+                st.session_state.schedule
+                .drop(st.session_state.schedule.index[selected_index])
+                .reset_index(drop=True)
+            )
+            st.success("일정이 삭제되었습니다.")
+            st.rerun()
+else:
+    st.info("등록된 일정이 없습니다.")
