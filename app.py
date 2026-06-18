@@ -1,101 +1,234 @@
 import streamlit as st
-from google import genai
+import random
 
-# 페이지 설정
 st.set_page_config(
-    page_title="연애상담 챗봇",
-    page_icon="💖"
+    page_title="반장 발표 도우미 Pro",
+    page_icon="🎤",
+    layout="wide"
 )
 
-st.title("💖 연애상담 챗봇")
-st.caption("Gemini 2.5 Flash Lite 기반")
+st.title("🎤 반장 발표 도우미 Pro")
 
-# API 키 불러오기
-try:
-    api_key = st.secrets["GEMINI_API_KEY"]
-except Exception:
-    st.error("GEMINI_API_KEY가 Secrets에 설정되지 않았습니다.")
-    st.stop()
+st.markdown(
+    """
+친구들이 만든 작품을
+반장이 앞에서 간단히 소개할 때 사용하는 앱입니다.
 
-# Gemini 클라이언트 생성
-try:
-    client = genai.Client(api_key=api_key)
-except Exception as e:
-    st.error(f"Gemini 초기화 오류: {e}")
-    st.stop()
+- 작품 요약
+- 발표 대본 생성
+- 예상 질문 생성
+- 발표 순서 관리
+"""
+)
 
-# 채팅 기록 유지
-if "messages" not in st.session_state:
-    st.session_state.messages = [
-        {
-            "role": "assistant",
-            "content": "안녕하세요. 연애 고민을 편하게 이야기해 주세요."
-        }
+# -------------------
+# 세션 상태
+# -------------------
+
+if "order_list" not in st.session_state:
+    st.session_state.order_list = []
+
+# -------------------
+# 메뉴
+# -------------------
+
+menu = st.sidebar.radio(
+    "메뉴",
+    [
+        "작품 소개 만들기",
+        "발표 순서",
+        "랜덤 발표자",
+        "사용 방법"
     ]
+)
 
-# 이전 대화 표시
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+# -------------------
+# 사용 방법
+# -------------------
 
-# 사용자 입력
-prompt = st.chat_input("연애 고민을 입력하세요")
+if menu == "사용 방법":
 
-if prompt:
-    # 사용자 메시지 저장
-    st.session_state.messages.append(
-        {"role": "user", "content": prompt}
+    st.header("📖 사용 방법")
+
+    st.write("1. 작품 제목 입력")
+    st.write("2. 만든 학생 입력")
+    st.write("3. 작품 설명 입력")
+    st.write("4. 소개 생성 버튼 클릭")
+    st.write("5. 생성된 내용을 그대로 읽으면 됨")
+
+# -------------------
+# 작품 소개
+# -------------------
+
+elif menu == "작품 소개 만들기":
+
+    st.header("📝 작품 소개 생성")
+
+    title = st.text_input("작품 제목")
+
+    creator = st.text_input("만든 학생")
+
+    description = st.text_area(
+        "작품 설명",
+        height=200,
+        placeholder="작품 내용을 간단히 입력하세요."
     )
 
-    with st.chat_message("user"):
-        st.markdown(prompt)
+    if st.button("소개 생성"):
 
-    try:
-        # 대화 기록 생성
-        history = []
+        try:
 
-        for msg in st.session_state.messages:
-            role = "user" if msg["role"] == "user" else "model"
-            history.append(
-                {
-                    "role": role,
-                    "parts": [{"text": msg["content"]}]
-                }
-            )
+            if not title.strip():
+                st.warning("작품 제목을 입력하세요.")
+                st.stop()
 
-        system_prompt = """
-        당신은 공감 능력이 뛰어난 연애상담 전문가입니다.
+            if not creator.strip():
+                st.warning("만든 학생을 입력하세요.")
+                st.stop()
 
-        규칙:
-        - 친절하고 따뜻하게 답변
-        - 현실적인 조언 제공
-        - 비난하지 않기
-        - 한국어로 답변
-        - 너무 긴 답변은 피하기
-        """
+            if not description.strip():
+                st.warning("작품 설명을 입력하세요.")
+                st.stop()
 
-        response = client.models.generate_content(
-            model="gemini-2.5-flash-lite",
-            contents=[
-                {
-                    "role": "user",
-                    "parts": [{"text": system_prompt}]
-                },
-                *history
+            short_script = f"""
+안녕하세요.
+
+이번 작품은 '{title}'입니다.
+
+{creator} 학생이 제작했으며,
+{description[:80]}...
+
+이상으로 소개를 마치겠습니다.
+"""
+
+            long_script = f"""
+안녕하세요.
+
+지금부터 '{title}' 작품을 소개하겠습니다.
+
+이 작품은 {creator} 학생이 제작했습니다.
+
+작품 설명:
+{description}
+
+학생의 아이디어와 노력이 담긴 작품이며,
+주제를 잘 표현하고 있습니다.
+
+이상으로 소개를 마치겠습니다.
+"""
+
+            keywords = []
+
+            for word in description.split():
+
+                word = word.strip(".,!?()[]{}")
+
+                if len(word) >= 3:
+                    keywords.append(word)
+
+            keywords = list(dict.fromkeys(keywords))
+
+            st.success("생성 완료")
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.subheader("⚡ 10초 소개")
+
+                st.text_area(
+                    "",
+                    short_script,
+                    height=180
+                )
+
+            with col2:
+                st.subheader("🎙️ 30초 소개")
+
+                st.text_area(
+                    "",
+                    long_script,
+                    height=180
+                )
+
+            st.subheader("🔑 핵심 키워드")
+
+            if keywords:
+                st.write(", ".join(keywords[:10]))
+            else:
+                st.write("키워드 추출 결과 없음")
+
+            st.subheader("❓ 예상 질문")
+
+            st.write("• 이 작품을 만들게 된 이유는 무엇인가요?")
+            st.write("• 가장 어려웠던 점은 무엇인가요?")
+            st.write("• 가장 신경 쓴 부분은 어디인가요?")
+            st.write("• 개선한다면 무엇을 바꾸고 싶나요?")
+
+        except Exception as e:
+            st.error(f"오류 발생: {e}")
+
+# -------------------
+# 발표 순서
+# -------------------
+
+elif menu == "발표 순서":
+
+    st.header("📋 발표 순서 관리")
+
+    name = st.text_input("학생 이름")
+
+    if st.button("순서 추가"):
+
+        if name.strip():
+            st.session_state.order_list.append(name.strip())
+            st.success("추가 완료")
+        else:
+            st.warning("이름을 입력하세요.")
+
+    if st.session_state.order_list:
+
+        st.subheader("현재 발표 순서")
+
+        for idx, student in enumerate(
+            st.session_state.order_list,
+            start=1
+        ):
+            st.write(f"{idx}. {student}")
+
+        if st.button("전체 삭제"):
+            st.session_state.order_list = []
+            st.rerun()
+
+# -------------------
+# 랜덤 발표자
+# -------------------
+
+elif menu == "랜덤 발표자":
+
+    st.header("🎲 랜덤 발표자 뽑기")
+
+    names = st.text_area(
+        "이름 입력 (한 줄에 한 명)"
+    )
+
+    if st.button("발표자 선택"):
+
+        try:
+
+            people = [
+                n.strip()
+                for n in names.split("\n")
+                if n.strip()
             ]
-        )
 
-        answer = response.text
+            if len(people) == 0:
+                st.warning("이름을 입력하세요.")
+            else:
+                selected = random.choice(people)
 
-    except Exception as e:
-        answer = f"오류가 발생했습니다.\n\n{str(e)}"
+                st.success(
+                    f"오늘의 발표자: {selected}"
+                )
 
-    with st.chat_message("assistant"):
-        st.markdown(answer)
-
-    st.session_state.messages.append(
-        {
-            "role": "assistant",
-            "content": answer
-        }
-    )
+        except Exception as e:
+            st.error(f"오류 발생: {e}")
