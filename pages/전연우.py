@@ -3,12 +3,12 @@ import pandas as pd
 from datetime import date
 
 st.set_page_config(
-    page_title="반장 도우미",
+    page_title="시험 일정 도우미",
     page_icon="📚",
     layout="wide"
 )
 
-st.title("📚 반장 도우미")
+st.title("📚시험 일정도우미")
 st.subheader("수행평가와 시험 일정을 한눈에 관리하세요!")
 
 # 세션 상태 초기화
