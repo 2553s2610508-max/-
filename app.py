@@ -1,234 +1,273 @@
 import streamlit as st
 import random
+from datetime import date
 
 st.set_page_config(
-    page_title="반장 발표 도우미 Pro",
-    page_icon="🎤",
+    page_title="반장 도우미",
+    page_icon="🏫",
     layout="wide"
 )
 
-st.title("🎤 반장 발표 도우미 Pro")
+st.title("🏫 반장 도우미")
+st.caption("우리 반을 더 편리하게 관리하는 통합 서비스")
 
-st.markdown(
+# -----------------------------
+# 세션 상태
+# -----------------------------
+if "suggestions" not in st.session_state:
+    st.session_state.suggestions = []
+
+if "events" not in st.session_state:
+    st.session_state.events = []
+
+# -----------------------------
+# 메인 소개
+# -----------------------------
+st.info(
     """
-친구들이 만든 작품을
-반장이 앞에서 간단히 소개할 때 사용하는 앱입니다.
+    👋 안녕하세요!
 
-- 작품 요약
-- 발표 대본 생성
-- 예상 질문 생성
-- 발표 순서 관리
-"""
+    이 페이지는 우리 반 친구들을 위해 만들어진 반장 도우미 입니다
+
+    아래 기능들을 사용할 수 있습니다.
+
+    ✅ 단합대회 일정 조율
+
+    ✅ 건의함
+
+    ✅ 시험·수행평가 캘린더
+
+    ✅ 공정한 자리 바꾸기
+    """
 )
 
-# -------------------
-# 세션 상태
-# -------------------
-
-if "order_list" not in st.session_state:
-    st.session_state.order_list = []
-
-# -------------------
-# 메뉴
-# -------------------
-
-menu = st.sidebar.radio(
-    "메뉴",
+tab1, tab2, tab3, tab4 = st.tabs(
     [
-        "작품 소개 만들기",
-        "발표 순서",
-        "랜덤 발표자",
-        "사용 방법"
+        "🎉 단합대회",
+        "📮 건의함",
+        "📅 학급 캘린더",
+        "🪑 자리 바꾸기"
     ]
 )
 
-# -------------------
-# 사용 방법
-# -------------------
+# ====================================================
+# 단합대회
+# ====================================================
+with tab1:
 
-if menu == "사용 방법":
+    st.header("🎉 단합대회 일정 조율")
 
-    st.header("📖 사용 방법")
-
-    st.write("1. 작품 제목 입력")
-    st.write("2. 만든 학생 입력")
-    st.write("3. 작품 설명 입력")
-    st.write("4. 소개 생성 버튼 클릭")
-    st.write("5. 생성된 내용을 그대로 읽으면 됨")
-
-# -------------------
-# 작품 소개
-# -------------------
-
-elif menu == "작품 소개 만들기":
-
-    st.header("📝 작품 소개 생성")
-
-    title = st.text_input("작품 제목")
-
-    creator = st.text_input("만든 학생")
-
-    description = st.text_area(
-        "작품 설명",
-        height=200,
-        placeholder="작품 내용을 간단히 입력하세요."
+    st.write(
+        """
+        단합대회 후보 날짜를 정해두고
+        친구들과 상의하여 일정을 결정할 수 있습니다.
+        """
     )
 
-    if st.button("소개 생성"):
+    event_name = st.text_input(
+        "행사 이름",
+        key="event_name"
+    )
+
+    event_date = st.date_input(
+        "후보 날짜",
+        value=date.today(),
+        key="event_date"
+    )
+
+    if st.button("일정 추가"):
 
         try:
+            if event_name.strip():
 
-            if not title.strip():
-                st.warning("작품 제목을 입력하세요.")
-                st.stop()
-
-            if not creator.strip():
-                st.warning("만든 학생을 입력하세요.")
-                st.stop()
-
-            if not description.strip():
-                st.warning("작품 설명을 입력하세요.")
-                st.stop()
-
-            short_script = f"""
-안녕하세요.
-
-이번 작품은 '{title}'입니다.
-
-{creator} 학생이 제작했으며,
-{description[:80]}...
-
-이상으로 소개를 마치겠습니다.
-"""
-
-            long_script = f"""
-안녕하세요.
-
-지금부터 '{title}' 작품을 소개하겠습니다.
-
-이 작품은 {creator} 학생이 제작했습니다.
-
-작품 설명:
-{description}
-
-학생의 아이디어와 노력이 담긴 작품이며,
-주제를 잘 표현하고 있습니다.
-
-이상으로 소개를 마치겠습니다.
-"""
-
-            keywords = []
-
-            for word in description.split():
-
-                word = word.strip(".,!?()[]{}")
-
-                if len(word) >= 3:
-                    keywords.append(word)
-
-            keywords = list(dict.fromkeys(keywords))
-
-            st.success("생성 완료")
-
-            col1, col2 = st.columns(2)
-
-            with col1:
-                st.subheader("⚡ 10초 소개")
-
-                st.text_area(
-                    "",
-                    short_script,
-                    height=180
+                st.session_state.events.append(
+                    {
+                        "name": event_name,
+                        "date": event_date
+                    }
                 )
 
-            with col2:
-                st.subheader("🎙️ 30초 소개")
+                st.success("일정 추가 완료")
 
-                st.text_area(
-                    "",
-                    long_script,
-                    height=180
-                )
-
-            st.subheader("🔑 핵심 키워드")
-
-            if keywords:
-                st.write(", ".join(keywords[:10]))
             else:
-                st.write("키워드 추출 결과 없음")
-
-            st.subheader("❓ 예상 질문")
-
-            st.write("• 이 작품을 만들게 된 이유는 무엇인가요?")
-            st.write("• 가장 어려웠던 점은 무엇인가요?")
-            st.write("• 가장 신경 쓴 부분은 어디인가요?")
-            st.write("• 개선한다면 무엇을 바꾸고 싶나요?")
+                st.warning("행사 이름을 입력하세요.")
 
         except Exception as e:
             st.error(f"오류 발생: {e}")
 
-# -------------------
-# 발표 순서
-# -------------------
+    if st.session_state.events:
 
-elif menu == "발표 순서":
+        st.subheader("등록된 일정")
 
-    st.header("📋 발표 순서 관리")
-
-    name = st.text_input("학생 이름")
-
-    if st.button("순서 추가"):
-
-        if name.strip():
-            st.session_state.order_list.append(name.strip())
-            st.success("추가 완료")
-        else:
-            st.warning("이름을 입력하세요.")
-
-    if st.session_state.order_list:
-
-        st.subheader("현재 발표 순서")
-
-        for idx, student in enumerate(
-            st.session_state.order_list,
+        for idx, event in enumerate(
+            st.session_state.events,
             start=1
         ):
-            st.write(f"{idx}. {student}")
+            st.write(
+                f"{idx}. {event['name']} - {event['date']}"
+            )
 
-        if st.button("전체 삭제"):
-            st.session_state.order_list = []
-            st.rerun()
+# ====================================================
+# 건의함
+# ====================================================
+with tab2:
 
-# -------------------
-# 랜덤 발표자
-# -------------------
+    st.header("📮 건의함")
 
-elif menu == "랜덤 발표자":
-
-    st.header("🎲 랜덤 발표자 뽑기")
-
-    names = st.text_area(
-        "이름 입력 (한 줄에 한 명)"
+    st.write(
+        """
+        우리 반에 필요한 물품이나
+        바뀌었으면 하는 점을 자유롭게 적어주세요.
+        """
     )
 
-    if st.button("발표자 선택"):
+    suggestion = st.text_area(
+        "건의 내용"
+    )
+
+    if st.button("건의 등록"):
 
         try:
 
-            people = [
+            if suggestion.strip():
+
+                st.session_state.suggestions.append(
+                    suggestion
+                )
+
+                st.success("건의가 등록되었습니다.")
+
+            else:
+                st.warning("내용을 입력하세요.")
+
+        except Exception as e:
+            st.error(f"오류 발생: {e}")
+
+    if st.session_state.suggestions:
+
+        st.subheader("등록된 건의")
+
+        for idx, item in enumerate(
+            st.session_state.suggestions,
+            start=1
+        ):
+            st.write(f"{idx}. {item}")
+
+# ====================================================
+# 캘린더
+# ====================================================
+with tab3:
+
+    st.header("📅 시험 · 수행평가 캘린더")
+
+    st.write(
+        """
+        시험 일정과 수행평가 일정을 기록할 수 있습니다.
+        """
+    )
+
+    title = st.text_input(
+        "일정 이름",
+        key="calendar_title"
+    )
+
+    schedule_date = st.date_input(
+        "날짜",
+        value=date.today(),
+        key="calendar_date"
+    )
+
+    if st.button("일정 등록"):
+
+        try:
+
+            if title.strip():
+
+                st.session_state.events.append(
+                    {
+                        "name": title,
+                        "date": schedule_date
+                    }
+                )
+
+                st.success("등록 완료")
+
+            else:
+                st.warning("일정 이름을 입력하세요.")
+
+        except Exception as e:
+            st.error(f"오류 발생: {e}")
+
+    if st.session_state.events:
+
+        st.subheader("예정된 일정")
+
+        sorted_events = sorted(
+            st.session_state.events,
+            key=lambda x: x["date"]
+        )
+
+        for event in sorted_events:
+
+            st.write(
+                f"📌 {event['date']} | {event['name']}"
+            )
+
+# ====================================================
+# 자리 바꾸기
+# ====================================================
+with tab4:
+
+    st.header("🪑 공정한 자리 바꾸기")
+
+    st.write(
+        """
+        학생 이름을 입력하면
+        무작위로 새로운 순서를 만들어 줍니다.
+        """
+    )
+
+    students = st.text_area(
+        "학생 이름 입력 (한 줄에 한 명)"
+    )
+
+    if st.button("자리 배치 생성"):
+
+        try:
+
+            names = [
                 n.strip()
-                for n in names.split("\n")
+                for n in students.split("\n")
                 if n.strip()
             ]
 
-            if len(people) == 0:
-                st.warning("이름을 입력하세요.")
+            if len(names) < 2:
+                st.warning(
+                    "2명 이상 입력하세요."
+                )
+
             else:
-                selected = random.choice(people)
+
+                random.shuffle(names)
 
                 st.success(
-                    f"오늘의 발표자: {selected}"
+                    "새로운 자리 순서가 생성되었습니다."
                 )
+
+                for idx, student in enumerate(
+                    names,
+                    start=1
+                ):
+                    st.write(
+                        f"{idx}번 자리 → {student}"
+                    )
 
         except Exception as e:
             st.error(f"오류 발생: {e}")
+
+st.divider()
+
+st.caption(
+    "반장 도우미 | 우리 반을 위한 간단한 관리 서비스"
+)
+
