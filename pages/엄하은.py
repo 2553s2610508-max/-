@@ -201,3 +201,49 @@ with tabs[2]:
 ---
 """
             )
+# =====================================================
+# 관리 탭
+# =====================================================
+with tabs[3]:
+
+    st.subheader("🛠️ 건의 관리")
+
+    password = st.text_input(
+        "관리자 비밀번호",
+        type="password"
+    )
+
+    ADMIN_PASSWORD = "1234"
+
+    if password == ADMIN_PASSWORD:
+
+        df = load_data()
+
+        if len(df) == 0:
+            st.info("삭제할 건의가 없습니다.")
+
+        else:
+
+            selected_id = st.selectbox(
+                "삭제할 건의 선택",
+                df["번호"]
+            )
+
+            selected_post = df[df["번호"] == selected_id].iloc[0]
+
+            st.write("### 선택된 건의")
+            st.write(f"**제목:** {selected_post['제목']}")
+            st.write(f"**종류:** {selected_post['종류']}")
+            st.write(f"**내용:** {selected_post['내용']}")
+
+            if st.button("🗑️ 삭제하기"):
+
+                df = df[df["번호"] != selected_id]
+
+                save_data(df)
+
+                st.success("건의가 삭제되었습니다.")
+                st.rerun()
+
+    elif password:
+        st.error("비밀번호가 올바르지 않습니다.")
