@@ -1,8 +1,8 @@
 import streamlit as st
-import pandas as pd
+import json
 import os
-import uuid
 from datetime import datetime
+import uuid
 
 st.set_page_config(
     page_title="학급 건의함",
@@ -10,191 +10,170 @@ st.set_page_config(
     layout="wide"
 )
 
-DATA_FILE = "suggestions.csv"
+DATA_FILE = "suggestions.json"
 
 
-# --------------------------
-# 데이터 파일 생성
-# --------------------------
-if not os.path.exists(DATA_FILE):
-    df = pd.DataFrame(
-        columns=[
-            "id",
-            "category",
-            "content",
-            "writer",
-            "date",
-            "delete_code"
-        ]
-    )
-    df.to_csv(DATA_FILE, index=False)
-
-
-# --------------------------
-# 데이터 불러오기
-# --------------------------
+# -------------------------
+# 데이터 저장/불러오기
+# -------------------------
 def load_data():
+    if not os.path.exists(DATA_FILE):
+        return []
+
     try:
-        return pd.read_csv(DATA_FILE)
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
     except:
-        return pd.DataFrame(
-            columns=[
-                "id",
-                "category",
-                "content",
-                "writer",
-                "date",
-                "delete_code"
-            ]
-        )
+        return []
 
 
-# --------------------------
-# 데이터 저장
-# --------------------------
-def save_data(df):
-    df.to_csv(DATA_FILE, index=False)
+def save_data(data):
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
 
 
-# --------------------------
+# -------------------------
+# 데이터 로드
+# -------------------------
+if "suggestions" not in st.session_state:
+    st.session_state.suggestions = load_data()
+
+
+# -------------------------
 # 제목
-# --------------------------
+# -------------------------
 st.title("📮 학급 건의함")
-st.caption("익명으로 자유롭게 건의할 수 있습니다.")
+st.caption("학급을 더 좋게 만들기 위한 의견을 자유롭게 남겨보세요!")
 
+
+# -------------------------
+# 메뉴
+# -------------------------
 menu = st.sidebar.radio(
     "메뉴 선택",
-    ["✍️ 건의하기", "📋 건의 게시판"]
+    ["✏️ 건의하기", "📋 건의 게시판"]
 )
 
-# ==================================================
+# ===================================================
 # 건의하기 페이지
-# ==================================================
-if menu == "✍️ 건의하기":
+# ===================================================
+if menu == "✏️ 건의하기":
 
-    st.header("건의 작성")
+    st.subheader("건의 작성")
 
     category = st.selectbox(
         "건의 종류",
         [
+            "시설",
             "수업",
             "급식",
-            "학급 환경",
             "행사",
+            "학급 규칙",
             "기타"
         ]
     )
 
+    title = st.text_input("제목")
+
     content = st.text_area(
-        "건의 내용을 입력하세요",
+        "건의 내용",
         height=200
     )
 
     anonymous = st.checkbox(
-        "익명으로 작성하기",
+        "익명으로 작성",
         value=True
     )
 
-    if anonymous:
-        writer = "익명"
-    else:
-        writer = st.text_input("이름")
+    if st.button("📨 건의 제출", use_container_width=True):
 
-    if st.button("건의 등록", use_container_width=True):
-
-        if not content.strip():
-            st.error("건의 내용을 입력해주세요.")
+        if not title.strip():
+            st.warning("제목을 입력해주세요.")
+        elif not content.strip():
+            st.warning("내용을 입력해주세요.")
         else:
 
-            delete_code = str(uuid.uuid4())[:8]
-
-            new_row = {
+            suggestion = {
                 "id": str(uuid.uuid4()),
                 "category": category,
-                "content": content,
-                "writer": writer if writer else "익명",
-                "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                "delete_code": delete_code
+                "title": title.strip(),
+                "content": content.strip(),
+                "writer": "익명" if anonymous else "학생",
+                "time": datetime.now().strftime("%Y-%m-%d %H:%M")
             }
 
-            df = load_data()
+            st.session_state.suggestions.append(suggestion)
+            save_data(st.session_state.suggestions)
 
-            df = pd.concat(
-                [df, pd.DataFrame([new_row])],
-                ignore_index=True
-            )
-
-            save_data(df)
-
-            st.success("건의가 등록되었습니다!")
-
-            st.info(
-                f"""
-                삭제코드: **{delete_code}**
-
-                ⚠️ 삭제를 원할 때 필요합니다.
-                꼭 저장해두세요.
-                """
-            )
+            st.success("건의가 등록되었습니다! 🎉")
 
 
-# ==================================================
+# ===================================================
 # 게시판 페이지
-# ==================================================
+# ===================================================
 else:
 
-    st.header("건의 게시판")
+    st.subheader("건의 게시판")
 
-    df = load_data()
-
-    if df.empty:
-        st.info("등록된 건의가 없습니다.")
-        st.stop()
-
-    categories = ["전체"] + sorted(df["category"].unique().tolist())
+    categories = [
+        "전체",
+        "시설",
+        "수업",
+        "급식",
+        "행사",
+        "학급 규칙",
+        "기타"
+    ]
 
     selected = st.selectbox(
         "카테고리 선택",
         categories
     )
 
+    suggestions = st.session_state.suggestions
+
     if selected != "전체":
-        df = df[df["category"] == selected]
+        suggestions = [
+            s for s in suggestions
+            if s["category"] == selected
+        ]
 
-    df = df.sort_values(
-        by="date",
-        ascending=False
-    )
+    suggestions = list(reversed(suggestions))
 
-    st.write(f"총 {len(df)}개의 건의")
+    if not suggestions:
+        st.info("등록된 건의가 없습니다.")
+    else:
 
-    for idx, row in df.iterrows():
+        for item in suggestions:
 
-        with st.expander(
-            f"[{row['category']}] {row['date']}"
-        ):
+            with st.container():
 
-            st.write("작성자")
-            st.info(row["writer"])
+                st.markdown(
+                    f"""
+### {item['title']}
+**분류:** {item['category']}  
+**작성자:** {item['writer']}  
+**작성일:** {item['time']}
+"""
+                )
 
-            st.write("내용")
-            st.write(row["content"])
+                st.write(item["content"])
 
-            st.divider()
+                if st.button(
+                    "🗑️ 삭제",
+                    key=item["id"]
+                ):
 
-if st.button(
-    "🗑️ 삭제하기",
-    key=f"delete_{row['id']}",
-    use_container_width=True
-):
+                    st.session_state.suggestions = [
+                        s for s in st.session_state.suggestions
+                        if s["id"] != item["id"]
+                    ]
 
-    original_df = load_data()
+                    save_data(
+                        st.session_state.suggestions
+                    )
 
-    original_df = original_df[
-        original_df["id"] != row["id"]
-    ]
+                    st.success("삭제되었습니다.")
+                    st.rerun()
 
-    save_data(original_df)
-
-    st.success("삭제되었습니다.")
-    st.rerun()
+                st.divider()
