@@ -58,7 +58,7 @@ with tabs[0]:
     category = st.selectbox(
         "건의 종류",
         [
-            "수업"
+            "수업",
             "교실 환경",
             "행사",
             "학급 규칙",
