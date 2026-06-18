@@ -9,8 +9,14 @@ st.set_page_config(page_title="반장 도우미", page_icon="🎉", layout="wide
 if "initialized" not in st.session_state:
     st.session_state.initialized = True
     st.session_state.student_db = {
-        "10101": "강백호", "10102": "서태웅", "10103": "송태섭", 
-        "10104": "정대만", "10105": "채치수"
+        "10501": "김유민", "10502": "강석현", "10503": "강세인", 
+        "10504": "김기웅", "10505": "김다민", "10506": "김대현", "10507": "김민서", "10508": "김솔비",
+        "10509": "김용준", "10510": "박강이", "10511": "박정후", "10512": "박준영", "10513": "박현욱",
+        "10514": "송유림", "10515": "송은호", "10516": "송지우", "10517": "심예원", "10518": "안시윤",
+        "10519": "엄하은", "10520": "여서현", "10521": "오승준", "10522": "우정은", "10523": "윤희승",
+        "10524": "이다은", "10525": "이승민", "10526": "이예나", "10527": "이하준", "10528": "이현우",
+        "10529": "임도연", "10530": "임선웅", "10531": "임지선", "10532": "전연우", "10533": "정선아",
+        "10534": "함형민", "10535": "황시우"
     }
     st.session_state.paid_status = {s_id: False for s_id in st.session_state.student_db}
     st.session_state.unavailable_days = {}
@@ -21,8 +27,8 @@ if "initialized" not in st.session_state:
     st.session_state.votes_activity = {}
     st.session_state.votes_detail = {}
 
-st.title("🎉 우리 반 단합대회 메이커")
-st.caption("반장님을 위한 올인원 의견 취합 및 자동 투표 시스템")
+st.title("🎉 우리 반 단합대회 정하기")
+st.caption("단합대회를 이 앱으로 한번에!!")
 st.markdown("---")
 
 # --- 사이드바: 사용자 인증 및 회비 관리 ---
@@ -30,8 +36,8 @@ with st.sidebar:
     st.header("👤 학생 인증 및 회비 확인")
     
     st.subheader("📝 의견/투표 제출자 정보")
-    user_id = st.text_input("학번 5자리 입력 (예: 10101)", key="user_id_input").strip()
-    user_name = st.text_input("이름 입력 (예: 강백호)", key="user_name_input").strip()
+    user_id = st.text_input("학번 5자리 입력 (예: 10529)", key="user_id_input").strip()
+    user_name = st.text_input("이름 입력 (예: 임도연)", key="user_name_input").strip()
     
     if user_id and user_name:
         if user_id not in st.session_state.student_db:
@@ -63,7 +69,7 @@ tab1, tab2, tab3 = st.tabs(["📅 1단계: 일정 조율", "🍔 2단계: 음식
 with tab1:
     st.header("🗓️ 안되는 요일 수집 및 일정 자동 조율")
     
-    days_list = ["월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일"]
+    days_list = ["월요일", "화요일", "수요일", "목요일", "금요일"]
     
     with st.form("day_submission_form"):
         st.markdown("**요일 의견 제출**")
